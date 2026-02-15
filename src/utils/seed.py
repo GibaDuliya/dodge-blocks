@@ -1,0 +1,3 @@
+def set_global_seed(seed: int) -> None:
+    """Фиксирует seed для random, numpy, torch."""
+    ...

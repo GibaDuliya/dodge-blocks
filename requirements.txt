@@ -1,5 +1,7 @@
-torch
+torch>=2.0
 numpy
 pygame
 pandas
 matplotlib
+jupyter
+pytest
