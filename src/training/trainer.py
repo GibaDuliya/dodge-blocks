@@ -1,26 +1,39 @@
-import csv
+class Trainer:
+    """Основной цикл обучения REINFORCE."""
 
-class Logger:
-    """Собирает статистики по эпизодам, пишет CSV и текстовые логи."""
-
-    def __init__(self, stats_path: str, log_path: str | None = None) -> None:
-        """Открывает/создаёт CSV файл, пишет заголовок."""
-        ...
-
-    def log_episode(
+    def __init__(
         self,
-        episode: int,
-        total_reward: float,
-        episode_length: int,
-        loss: float,
+        env: "GameEnv",
+        agent: "ReinforceAgent",
+        train_config: "TrainConfig",
+        logger: "Logger",
     ) -> None:
-        """Добавляет строку в CSV и (опционально) печатает в консоль."""
+        """Сохраняет зависимости."""
         ...
 
-    def get_dataframe(self) -> "pd.DataFrame":
-        """Читает CSV и возвращает pandas DataFrame (для ноутбуков)."""
+    def train(self) -> dict:
+        """
+        Запускает цикл на num_episodes эпизодов.
+        В каждом вызывает run_episode(), затем agent.update_policy().
+        Периодически вызывает save_checkpoint() и logger.log_episode().
+        Возвращает итоговый словарь статистик.
+        """
         ...
 
-    def close(self) -> None:
-        """Закрывает файловые дескрипторы."""
+    def run_episode(self) -> tuple[float, int]:
+        """
+        Один эпизод: reset env → цикл (select_action, step, store_reward)
+        до done или max_steps. Возвращает (total_reward, steps).
+        """
+        ...
+
+    def save_checkpoint(self, episode: int) -> None:
+        """Вызывает agent.save() с путём из train_config.checkpoint_dir."""
+        ...
+
+    def evaluate(self, num_episodes: int) -> dict:
+        """
+        Запускает num_episodes без обучения (torch.no_grad),
+        возвращает {'mean_reward': ..., 'mean_length': ..., 'std_reward': ...}.
+        """
         ...
