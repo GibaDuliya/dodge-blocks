@@ -1,74 +1,106 @@
 import argparse
 import pygame
-import numpy as np
+import torch
+import sys
+import os
+import time
 
-# Правильные импорты согласно структуре
+sys.path.append(os.getcwd())
+
 from src.environment.game_env import GameEnv
 from src.environment.renderer import GameRenderer
-from src.utils.config import EnvConfig, RenderConfig
+from src.agent.reinforce_agent import ReinforceAgent
+from src.utils.config import EnvConfig, RenderConfig, AgentConfig
 
 def parse_args():
     parser = argparse.ArgumentParser()
     parser.add_argument("--mode", choices=["human", "agent"], default="human")
+    parser.add_argument("--model", default="best.pt")
     return parser.parse_args()
 
-def play_human(env: GameEnv, renderer: GameRenderer) -> None:
+def play_human(env, renderer):
     running = True
-    
     while running:
-        state = env.reset()
-        if isinstance(state, tuple): state = state[0]
-        
+        env.reset()
         done = False
         total_score = 0
-
-        # Основной игровой цикл
         while not done:
-            if not renderer.handle_events():
-                return # Полный выход
-
+            if not renderer.handle_events(): return
             keys = pygame.key.get_pressed()
             action = 1 
             if keys[pygame.K_LEFT]: action = 0
             elif keys[pygame.K_RIGHT]: action = 2
 
-            state, reward, done, info = env.step(action)
+            _, reward, done, _ = env.step(action)
             total_score += reward
-            renderer.render(state, int(total_score))
-
-        # Цикл меню (когда игра окончена)
-        waiting_for_input = True
-        while waiting_for_input:
-            renderer.render_menu(int(total_score)) # Рисуем меню
-            
-            for event in pygame.event.get():
-                if event.type == pygame.QUIT:
-                    return
-                if event.type == pygame.KEYDOWN:
-                    if event.key == pygame.K_r: # Рестарт
-                        waiting_for_input = False
-                    if event.key == pygame.K_q: # Выход
-                        running = False
-                        waiting_for_input = False
-
+            renderer.render(env, int(total_score)) # Передаем env
+        
+        if not show_game_over(renderer, total_score): running = False
     renderer.close()
+
+def play_agent(env, renderer, agent):
+    running = True
+    while running:
+        state = env.reset()
+        done = False
+        total_score = 0
+        print("New Episode Starting...")
+        while not done:
+            if not renderer.handle_events(): return
+
+            with torch.no_grad():
+                action = agent.select_action(state)
+                agent.clear_buffers()
+
+            state, reward, done, _ = env.step(action)
+            total_score += reward
+            renderer.render(env, int(total_score)) # Передаем env
+
+        print(f"Agent Score: {total_score}")
+        time.sleep(0.5) 
+        if not show_game_over(renderer, total_score): running = False
+    renderer.close()
+
+def show_game_over(renderer, score):
+    waiting = True
+    while waiting:
+        renderer.render_menu(int(score))
+        for event in pygame.event.get():
+            if event.type == pygame.QUIT: return False
+            if event.type == pygame.KEYDOWN:
+                if event.key == pygame.K_r: return True
+                if event.key == pygame.K_q: return False
+    return False
 
 def main():
     args = parse_args()
-    
-    # Инициализация конфигов
     e_cfg = EnvConfig()
     r_cfg = RenderConfig()
+    a_cfg = AgentConfig()
     
-    # Инициализация среды и рендерера
     env = GameEnv(e_cfg)
     renderer = GameRenderer(e_cfg, r_cfg)
 
     if args.mode == "human":
         play_human(env, renderer)
     else:
-        # Здесь будет логика для play_agent (Блок 3)
-        pass
+        agent = ReinforceAgent(a_cfg)
+        ckpt_path = os.path.join("artifacts/checkpoints", args.model)
+        
+        # Загружаем модель отдельно от игрового цикла, чтобы видеть ошибки загрузки
+        if not os.path.exists(ckpt_path):
+            print(f"Error: Model file not found at {ckpt_path}")
+            return
+
+        agent.load(ckpt_path)
+        print(f"Successfully loaded model: {ckpt_path}")
+        
+        try:
+            play_agent(env, renderer, agent)
+        except Exception as e:
+            print(f"Game crashed: {e}")
+            import traceback
+            traceback.print_exc()
 
 if __name__ == "__main__":
     main()
