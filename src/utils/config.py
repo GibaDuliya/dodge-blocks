@@ -1,12 +1,13 @@
 from dataclasses import dataclass, field
+from typing import Dict, Tuple
 
 @dataclass
 class EnvConfig:
-    grid_width: int = 5          # ширина поля (число клеток)
+    grid_width: int = 30         # ширина поля (число клеток)
     block_min_width: int = 1   # мин. ширина блока
     block_max_width: int = 1      # макс. ширина блока
     block_fall_speed: int = 1    # на сколько клеток блок опускается за шаг
-    grid_height: int = 4         # высота поля (откуда блок начинает падать)
+    grid_height: int = 10         # высота поля (откуда блок начинает падать)
     agent_start_pos: int = None     # стартовая позиция агента (None → центр)
 
 @dataclass
@@ -28,6 +29,12 @@ class TrainConfig:
 
 @dataclass
 class RenderConfig:
-    cell_size: int            # размер клетки в пикселях
-    fps: int                  # кадров в секунду
-    colors: dict              # словарь цветов {"agent": ..., "block": ..., "bg": ...}
+    cell_size: int = 40
+    fps: int = 10
+    colors: Dict[str, Tuple[int, int, int]] = field(default_factory=lambda: {
+        "agent": (50, 200, 50),    # Зеленый
+        "block": (200, 50, 50),    # Красный
+        "bg": (30, 30, 30),       # Темно-серый
+        "grid": (50, 50, 50),     # Линии сетки
+        "text": (255, 255, 255)   # Белый
+    })
