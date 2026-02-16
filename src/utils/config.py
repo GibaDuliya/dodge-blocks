@@ -2,12 +2,12 @@ from dataclasses import dataclass, field
 
 @dataclass
 class EnvConfig:
-    grid_width: int          # ширина поля (число клеток)
-    block_min_width: int     # мин. ширина блока
-    block_max_width: int     # макс. ширина блока
-    block_fall_speed: int    # на сколько клеток блок опускается за шаг
-    grid_height: int         # высота поля (откуда блок начинает падать)
-    agent_start_pos: int     # стартовая позиция агента (None → центр)
+    grid_width: int = 5          # ширина поля (число клеток)
+    block_min_width: int = 1   # мин. ширина блока
+    block_max_width: int = 1      # макс. ширина блока
+    block_fall_speed: int = 1    # на сколько клеток блок опускается за шаг
+    grid_height: int = 4         # высота поля (откуда блок начинает падать)
+    agent_start_pos: int = None     # стартовая позиция агента (None → центр)
 
 @dataclass
 class AgentConfig:
