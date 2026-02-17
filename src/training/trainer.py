@@ -1,6 +1,7 @@
 import torch
 import os
 import numpy as np
+from collections import deque
 from src.environment.game_env import GameEnv
 from src.agent.reinforce_agent import ReinforceAgent
 from src.training.logger import Logger
@@ -14,6 +15,11 @@ class Trainer:
         # Начинаем с очень низкого значения
         self.best_reward = -float('inf')
         
+        # параметры быстрой остановки
+        self.early_stop_window = getattr(self.cfg, 'early_stop_window', 30)
+        self.early_stop_threshold = getattr(self.cfg, 'early_stop_threshold', 0.8)
+        self.recent_steps = deque(maxlen=self.early_stop_window)
+
         os.makedirs(self.cfg.checkpoint_dir, exist_ok=True)
 
     def train(self) -> dict:
@@ -47,6 +53,22 @@ class Trainer:
             # Чекпоинт
             if episode % self.cfg.checkpoint_every == 0:
                 self.save_model("last.pt")
+
+            # выход в случае постоянного достижения максимального числа шагов за эпизод
+            self.recent_steps.append(steps)
+            if len(self.recent_steps) == self.early_stop_window:
+                ratio = sum(
+                    1 for s in self.recent_steps
+                    if s >= self.cfg.max_steps_per_episode
+                ) / self.early_stop_window
+                if ratio >= self.early_stop_threshold:
+                    print(
+                        f"Early stop at episode {episode}: "
+                        f"{ratio*100:.0f}% of last {self.early_stop_window} "
+                        f"episodes reached max steps ({self.cfg.max_steps_per_episode})."
+                    )
+                    self.save_model("last.pt")
+                    return {}
                 
         self.save_model("last.pt")
         print("Training finished.")

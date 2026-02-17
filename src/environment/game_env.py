@@ -1,9 +1,9 @@
 import numpy as np
 
 class GameEnv:
-    def __init__(self, config) -> None:
+    def __init__(self, config, seed) -> None:
         self.cfg = config
-        self.rng = np.random.default_rng()
+        self.rng = np.random.default_rng(seed)
         self.reset()
 
     def reset(self) -> np.ndarray:
