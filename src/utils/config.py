@@ -1,5 +1,5 @@
 from dataclasses import dataclass, field
-from typing import Dict, Tuple
+from typing import Dict, Tuple, Optional
 
 @dataclass
 class EnvConfig:
@@ -8,6 +8,9 @@ class EnvConfig:
     block_min_width: int = 1
     block_max_width: int = 2
     block_fall_speed: int = 1
+    # Ablation Flags
+    state_mode: str = "relative" # "absolute" или "relative"
+    reward_mode: str = "enhanced" # "basic" или "enhanced"
 
 @dataclass
 class AgentConfig:
@@ -16,17 +19,21 @@ class AgentConfig:
     action_dim: int = 3
     learning_rate: float = 0.001 
     gamma: float = 0.99
-    entropy_coef: float = 0.01   # Уменьшили энтропию, чтобы он быстрее фокусировался на цели
+    # Ablation Flags
+    use_normalization: bool = True
+    entropy_coef: float = 0.0 # 0.0 для отключения
 
 @dataclass
 class TrainConfig:
-    num_episodes: int = 500
+    num_episodes: int = 800
     max_steps_per_episode: int = 2000
-    checkpoint_every: int = 400
-    log_every: int = 50
-    stats_path: str = "artifacts/logs/train_stats.csv"
-    checkpoint_dir: str = "artifacts/checkpoints"
-# ... RenderConfig без изменений
+    checkpoint_every: int = 500
+    log_every: int = 1
+    # Пути будут динамическими в зависимости от эксперимента
+    exp_name: str = "default"
+    stats_path: str = "" 
+    checkpoint_dir: str = ""
+
 @dataclass
 class RenderConfig:
     cell_size: int = 40
