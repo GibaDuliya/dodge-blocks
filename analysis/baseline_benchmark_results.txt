@@ -1,0 +1,23 @@
+Baseline Benchmark Results
+==========================
+
+Seed 1: Original=351, Baseline=216
+Seed 2: Original=327, Baseline=324
+Seed 3: Original=283, Baseline=229
+Seed 4: Original=407, Baseline=310
+Seed 5: Original=276, Baseline=254
+Seed 6: Original=910, Baseline=281
+Seed 7: Original=315, Baseline=175
+Seed 8: Original=1030, Baseline=839
+Seed 9: Original=271, Baseline=373
+Seed 10: Original=736, Baseline=253
+Seed 11: Original=461, Baseline=209
+Seed 12: Original=271, Baseline=322
+Seed 13: Original=239, Baseline=240
+Seed 14: Original=510, Baseline=189
+Seed 15: Original=1301, Baseline=261
+Seed 16: Original=461, Baseline=864
+Seed 17: Original=449, Baseline=237
+Seed 18: Original=692, Baseline=293
+Seed 19: Original=439, Baseline=266
+Seed 20: Original=414, Baseline=463
