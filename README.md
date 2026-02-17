@@ -195,7 +195,7 @@ make shell      # Interactive shell
 
 ---
 
-## 📈 Baseline Training Results
+## Baseline Training Results
 
 > Replace the path below with your actual saved plot.
 
@@ -203,7 +203,7 @@ make shell      # Interactive shell
 
 ---
 
-## 🚀 Training Improvements
+## Training Improvements
 
 During experiments we observed that the baseline REINFORCE implementation was unstable: the agent often collapsed to a single action and failed to learn an effective strategy.  
 To fix this, we tested multiple modifications.
@@ -278,7 +278,7 @@ This provides a clearer training signal and improves learning speed.
 
 ---
 
-## 📊 Comparison of Training Modifications
+## Comparison of Training Modifications
 
 > Replace the path below with your actual saved plot.
 
@@ -295,7 +295,7 @@ The comparison plot contains reward vs episode for:
 
 ---
 
-## ✅ Conclusion
+## Conclusion
 
 We demonstrated that REINFORCE can solve the Dodge Blocks environment, but it requires stabilization.  
 The best performance was achieved by combining:
