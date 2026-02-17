@@ -18,12 +18,13 @@ def parse_args():
     parser.add_argument("--state", choices=["absolute", "relative"], default="absolute")
     parser.add_argument("--reward", choices=["basic", "enhanced"], default="basic")
     parser.add_argument("--episodes", type=int, default=800)
+    parser.add_argument("--seed", type=int, default=42, help="Seed")
     return parser.parse_args()
 
 def main():
     args = parse_args()
-    #
-    set_global_seed(42)
+    
+    set_global_seed(args.seed)
     # Инициализация конфигов с учетом аргументов
     env_cfg = EnvConfig(state_mode=args.state, reward_mode=args.reward)
     agent_cfg = AgentConfig(use_normalization=args.norm, entropy_coef=args.entropy)
@@ -39,7 +40,7 @@ def main():
     print(f"\n>>> Running Experiment: {args.name}")
     print(f"Configs: Norm={args.norm}, Entropy={args.entropy}, State={args.state}, Reward={args.reward}")
 
-    env = GameEnv(env_cfg)
+    env = GameEnv(env_cfg, seed=args.seed)
     agent = ReinforceAgent(agent_cfg)
     logger = Logger(train_cfg.stats_path)
     trainer = Trainer(env, agent, train_cfg, logger)
