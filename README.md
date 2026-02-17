@@ -3,6 +3,10 @@
 This project implements a custom Reinforcement Learning environment where an agent must survive as long as possible by avoiding falling blocks in a 1D discrete grid.  
 The agent is trained using the **REINFORCE policy gradient algorithm**.
 
+<p align="center">
+  <img src="analysis/records/gameplay_2.gif" width="300">
+</p>
+
 ---
 
 ## Game Description
@@ -80,6 +84,232 @@ Loss (minimized in practice):
 $$
 L(\theta) = -\sum_{t=0}^{\tau-1} G_t \log \pi_\theta(a_t|s_t)
 $$
+
+
+## Original REINFORCE Training Results
+
+
+![Original REINFORCE training curve](analysis/simple_model.png)
+
+---
+
+## Training Improvements
+
+During our experiments, we aimed to make training faster and more stable.  
+As shown in the learning curves, the baseline REINFORCE setup produced noisy rewards and unstable episode lengths, which slowed down convergence.  
+To reduce variance and accelerate learning, we tested several training improvements described below.
+
+### 1) Height-Based Analytical Baseline (Approximate Value Function)
+
+Firstly, we introduced an analytical baseline based on an approximate value function.
+
+In our environment, rewards are sparse and occur only when the falling block reaches the bottom:
+
+- Miss reward: `r_miss = +1` (the block lands without hitting the agent)
+- Death reward: `r_death = -10` (the block hits the agent, episode ends)
+
+There is no additional reward per step, meaning that the return is fully determined by survival events.
+
+We approximate the full state:
+
+$$
+s = (agent_x, block_{left}, block_{right}, block_y)
+$$
+
+using only the block height:
+
+$$
+V(s) ≈ V(h), \:where \:h = block_y
+$$
+
+We also estimate the probability of surviving a landing event as a constant:
+
+$$
+p = p_{miss}
+$$
+
+where `p_miss` is computed empirically during training from previous episodes.
+
+---
+
+#### Analytical Derivation
+
+If the block is currently at height `h`, the agent must survive `h` steps before reaching the landing event.
+Since there are no rewards during falling, we obtain the discounted relation:
+
+$$
+V(h) = \gamma^h * V(0)
+$$
+
+At height `h = 0` (landing event):
+
+- with probability `p`, the agent survives and receives `r_miss = +1`
+- with probability `(1 - p)`, the agent dies and receives `r_death = -10`
+
+If the agent survives, a new block spawns at height `H`, so the expected future return is `V(H)`.
+
+Thus:
+
+$$
+V(0) = p * (r_{miss} + \gamma * V(H)) + (1 - p) * r_{death}
+$$
+
+Using:
+
+$$
+V(H) = \gamma^H * V(0)
+$$
+
+we get:
+
+$$
+V(0) = p * r_{miss} + (1 - p) * r_{death} + p * \gamma^{H+1} * V(0)
+$$
+
+Solving for `V(0)`:
+
+$$
+V(0) = \frac{p * r_{miss} + (1 - p) * r_{death}}{1 - p * \gamma^{H+1}}
+$$
+
+Substituting `r_miss = 1` and `r_death = -10`:
+
+$$
+V(0) = \frac{(11*p - 10)}{(1 - p * \gamma^{H+1})}
+$$
+
+Finally, for any height `h`:
+
+$$
+V(h) = \gamma^h * V(0)
+$$
+
+---
+
+#### Using the Baseline in REINFORCE
+
+We use this value estimate as a baseline in the policy gradient update:
+
+$$
+A_t = G_t - V(h_t)
+$$
+
+where:
+
+- `G_t` is discounted return at timestep `t`
+- `h_t` is the current block height
+
+This baseline does not depend on the chosen action, so it preserves the correctness of the REINFORCE gradient while significantly reducing variance.
+
+In practice, this led to faster convergence and smoother training curves.
+
+
+### 2) Entropy Bonus (Encouraging Exploration)
+
+A common failure mode of REINFORCE is **policy collapse**, when the agent becomes overconfident and starts selecting only one action.  
+To prevent this, we add entropy regularization:
+
+$$
+H(\pi(\cdot|s_t)) = -\sum_a \pi(a|s_t)\log \pi(a|s_t)
+$$
+
+Final loss:
+
+$$
+L(\theta) = -\sum_{t} \hat{G}_t \log \pi_\theta(a_t|s_t)
+\;-\;
+\beta \sum_t H(\pi_\theta(\cdot|s_t))
+$$
+
+Where $\beta$ is the entropy coefficient. This significantly improved exploration and prevented the agent from getting stuck.
+
+### 3) Improved State Representation (Relative Coordinates)
+
+The original state used absolute coordinates:
+
+$$
+(x_{agent}, x_{left}, x_{right}, y_{block})
+$$
+
+Learning from absolute positions was slow. We changed the state to relative distances:
+
+$$
+s = (d_{left}, d_{right}, y_{block})
+$$
+
+Where:
+
+$$
+d_{left} = x_{agent} - x_{left}, \quad
+d_{right} = x_{right} - x_{agent}
+$$
+
+This makes the policy more position-invariant and improves learning speed.
+
+### 4) Reward Shaping (Better Goal Signal)
+
+Baseline reward:
+
+- +1 for each successfully avoided block
+- −10 for collision
+
+Modified reward scheme:
+
+- **+0.1** for each survived timestep
+- **+10.0** for each successfully avoided block
+- **−10.0** for collision
+
+This provides a clearer training signal and improves learning speed.
+
+---
+
+## Comparison of Training Modifications
+
+
+![Training comparison](analysis/learning_plot.png)
+
+The comparison plot contains reward vs episode for:
+
+- Original REINFORCE
+- Baseline
+- Entropy bonus
+- Relative state representation
+- Reward shaping
+
+
+To ensure that the baseline improvement is not caused by a lucky random seed, we repeated the training procedure for 20 different seeds, comparing the original REINFORCE setup against the version with the analytical baseline. The results are shown in the figure below.
+
+![Baseline comparison](analysis/bar.png)
+
+In the vast majority of runs, the baseline significantly accelerates convergence (fewer episodes are required to reach stable survival performance). On average, the baseline reduces the number of training episodes by approximately **30%**, confirming that the improvement is consistent and not due to randomness.
+
+
+## Conclusion
+
+In this project, we implemented a custom 1D Falling Blocks environment and successfully trained an agent using the REINFORCE policy gradient algorithm. While the original REINFORCE setup was able to learn a valid survival strategy, training was slow (515 episodes on average) and highly unstable due to the high variance of Monte-Carlo returns and sparse reward structure.
+
+To address these issues, we introduced several improvements, including an analytical height-based baseline, entropy regularization, relative state representation, and reward shaping. These modifications significantly improved learning stability and accelerated convergence. In particular, the analytical baseline reduced training variance and provided a consistent performance gain across multiple random seeds, achieving approximately **30% faster learning on average**.
+
+Overall, the experiments confirm that even simple variance-reduction techniques and better state/reward design can dramatically improve REINFORCE performance in sparse and stochastic environments.
+
+## Development
+
+### Running Tests
+
+```bash
+pytest tests/
+```
+
+### Code Structure
+
+- **Agent**: `src/agent/reinforce_agent.py` - REINFORCE algorithm implementation
+- **Environment**: `src/environment/game_env.py` - Game logic and state management
+- **Training**: `src/training/trainer.py` - Training loop and optimization
+- **Config**: `src/utils/config.py` - Configuration dataclasses
+
+## License
+
+This is an educational project.
 
 ---
 
@@ -195,132 +425,3 @@ make shell      # Interactive shell
 
 ---
 
-## Baseline Training Results
-
-
-![Baseline training curve](artifacts/plots/training_baseline.png)
-
----
-
-## Training Improvements
-
-During experiments we observed that the baseline REINFORCE implementation was unstable: the agent often collapsed to a single action and failed to learn an effective strategy.  
-To fix this, we tested multiple modifications.
-
-### 1) Returns Normalization (Standardizing Returns)
-
-Instead of using raw returns \(G_t\), we normalize them inside each episode:
-
-\[
-\hat{G}_t = \frac{G_t - \mu}{\sigma + \varepsilon}
-\]
-
-Where \(\mu\) is the mean return over the episode and \(\sigma\) is the standard deviation over the episode.  
-This improves stability by keeping gradient magnitudes consistent across episodes.
-
-### 2) Entropy Bonus (Encouraging Exploration)
-
-A common failure mode of REINFORCE is **policy collapse**, when the agent becomes overconfident and starts selecting only one action.  
-To prevent this, we add entropy regularization:
-
-\[
-H(\pi(\cdot|s_t)) = -\sum_a \pi(a|s_t)\log \pi(a|s_t)
-\]
-
-Final loss:
-
-\[
-L(\theta) = -\sum_{t} \hat{G}_t \log \pi_\theta(a_t|s_t)
-\;-\;
-\beta \sum_t H(\pi_\theta(\cdot|s_t))
-\]
-
-Where \(\beta\) is the entropy coefficient. This significantly improved exploration and prevented the agent from getting stuck.
-
-### 3) Improved State Representation (Relative Coordinates)
-
-The original state used absolute coordinates:
-
-\[
-(x_{agent}, x_{left}, x_{right}, y_{block})
-\]
-
-Learning from absolute positions was slow. We changed the state to relative distances:
-
-\[
-s = (d_{left}, d_{right}, y_{block})
-\]
-
-Where:
-
-\[
-d_{left} = x_{agent} - x_{left}, \quad
-d_{right} = x_{right} - x_{agent}
-\]
-
-This makes the policy more position-invariant and improves learning speed.
-
-### 4) Reward Shaping (Better Goal Signal)
-
-Baseline reward:
-
-- +1 for each successfully avoided block
-- −10 for collision
-
-Modified reward scheme:
-
-- **+0.1** for each survived timestep
-- **+10.0** for each successfully avoided block
-- **−10.0** for collision
-
-This provides a clearer training signal and improves learning speed.
-
----
-
-## Comparison of Training Modifications
-
-> Replace the path below with your actual saved plot.
-
-![Training comparison](artifacts/plots/training_comparison.png)
-
-The comparison plot contains reward vs episode for:
-
-- Baseline REINFORCE
-- Returns normalization
-- Entropy bonus
-- Relative state representation
-- Reward shaping
-- Combined final version
-
----
-
-## Conclusion
-
-We demonstrated that REINFORCE can solve the Dodge Blocks environment, but it requires stabilization.  
-The best performance was achieved by combining:
-
-- returns normalization
-- entropy bonus
-- relative state representation
-- reward shaping
-
-These modifications made training faster, more stable, and easier to interpret.
-
-## Development
-
-### Running Tests
-
-```bash
-pytest tests/
-```
-
-### Code Structure
-
-- **Agent**: `src/agent/reinforce_agent.py` - REINFORCE algorithm implementation
-- **Environment**: `src/environment/game_env.py` - Game logic and state management
-- **Training**: `src/training/trainer.py` - Training loop and optimization
-- **Config**: `src/utils/config.py` - Configuration dataclasses
-
-## License
-
-This is an educational project.
