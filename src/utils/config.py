@@ -9,10 +9,12 @@ class EnvConfig:
     block_max_width: int = 2
     block_fall_speed: int = 1
     # Ablation Flags
+
     state_mode: str = "relative" # "absolute" или "relative"
     reward_mode: str = "enhanced" # "basic" или "enhanced"
     # seed для генератора случайных чисел в game_env.py
     seed = 42
+
 
 @dataclass
 class AgentConfig:
@@ -24,6 +26,7 @@ class AgentConfig:
     # Ablation Flags
     use_normalization: bool = True
     entropy_coef: float = 0.0 # 0.0 для отключения
+    use_height_baseline: bool = False
 
 @dataclass
 class TrainConfig:
