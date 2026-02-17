@@ -8,6 +8,7 @@ from src.agent.reinforce_agent import ReinforceAgent
 from src.training.trainer import Trainer
 from src.training.logger import Logger
 from src.utils.config import EnvConfig, AgentConfig, TrainConfig
+from src.utils.seed import set_global_seed
 
 def parse_args():
     parser = argparse.ArgumentParser()
@@ -21,7 +22,8 @@ def parse_args():
 
 def main():
     args = parse_args()
-    
+    #
+    set_global_seed(42)
     # Инициализация конфигов с учетом аргументов
     env_cfg = EnvConfig(state_mode=args.state, reward_mode=args.reward)
     agent_cfg = AgentConfig(use_normalization=args.norm, entropy_coef=args.entropy)

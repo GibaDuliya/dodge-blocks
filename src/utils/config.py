@@ -33,6 +33,8 @@ class TrainConfig:
     exp_name: str = "default"
     stats_path: str = "" 
     checkpoint_dir: str = ""
+    early_stop_window: int = 50
+    early_stop_threshold: float = 0.8
 
 @dataclass
 class RenderConfig:
