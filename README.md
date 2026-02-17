@@ -217,7 +217,7 @@ Final loss:
 
 $$
 L(\theta) = -\sum_{t} G_t \log \pi_\theta(a_t|s_t)
--
+\:-\:
 \beta \sum_t H(\pi_\theta(\cdot|s_t))
 $$
 
