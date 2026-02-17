@@ -1,0 +1,59 @@
+services:
+  train:
+    build: .
+    image: dodge-blocks:latest
+    container_name: dodge-blocks-train
+    volumes:
+      - ./artifacts:/app/artifacts
+      - ./analysis:/app/analysis
+    command: python run/train.py
+    environment:
+      - PYTHONUNBUFFERED=1
+    # For GPU support
+    # deploy:
+    #   resources:
+    #     reservations:
+    #       devices:
+    #         - driver: nvidia
+    #           count: 1
+    #           capabilities: [gpu]
+    # For interactive mode
+    # stdin_open: true
+    # tty: true
+
+  evaluate:
+    build: .
+    image: dodge-blocks:latest
+    container_name: dodge-blocks-eval
+    volumes:
+      - ./artifacts:/app/artifacts
+      - ./analysis:/app/analysis
+    command: python run/evaluate.py --checkpoint artifacts/checkpoints/best.pt --num_episodes 100
+    environment:
+      - PYTHONUNBUFFERED=1
+      - DISPLAY=${DISPLAY:-:0}
+    # For GPU support
+    # deploy:
+    #   resources:
+    #     reservations:
+    #       devices:
+    #         - driver: nvidia
+    #           count: 1
+    #           capabilities: [gpu]
+    # network_mode: host
+    # volumes:
+    #   - /tmp/.X11-unix:/tmp/.X11-unix:rw
+
+  jupyter:
+    build: .
+    image: dodge-blocks:latest
+    container_name: dodge-blocks-jupyter
+    ports:
+      - "8889:8888"
+    volumes:
+      - ./artifacts:/app/artifacts
+      - ./analysis:/app/analysis
+    command: jupyter lab --ip=0.0.0.0 --port=8888 --no-browser --allow-root --NotebookApp.token='' --NotebookApp.password=''
+    # Access at http://localhost:8889 (mapped from container port 8888)
+    environment:
+      - PYTHONUNBUFFERED=1
