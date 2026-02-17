@@ -12,6 +12,11 @@ class Trainer:
         self.agent = agent
         self.cfg = train_config
         self.logger = logger
+        
+        # Set grid height and state mode on agent for baseline computation
+        self.agent.grid_height = env.cfg.grid_height
+        self.agent.state_mode = env.cfg.state_mode
+        
         # Начинаем с очень низкого значения
         self.best_reward = -float('inf')
         
@@ -82,9 +87,12 @@ class Trainer:
         
         while not done:
             action = self.agent.select_action(state)
-            next_state, reward, done, _ = self.env.step(action)
+            next_state, reward, done, info = self.env.step(action)
             
             self.agent.store_reward(reward)
+            
+            # Track miss/death events for baseline
+            self.agent.update_episode_stats(info)
             
             state = next_state
             total_reward += reward
