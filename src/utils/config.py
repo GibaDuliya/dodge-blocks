@@ -11,6 +11,8 @@ class EnvConfig:
     # Ablation Flags
     state_mode: str = "relative" # "absolute" или "relative"
     reward_mode: str = "enhanced" # "basic" или "enhanced"
+    # seed для генератора случайных чисел в game_env.py
+    seed = 42
 
 @dataclass
 class AgentConfig:
@@ -35,6 +37,8 @@ class TrainConfig:
     checkpoint_dir: str = ""
     early_stop_window: int = 50
     early_stop_threshold: float = 0.8
+    # 
+    seed = 42
 
 @dataclass
 class RenderConfig:
