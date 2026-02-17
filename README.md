@@ -83,7 +83,119 @@ $$
 
 ---
 
-## 📈 Baseline Training Results
+## Requirements
+
+- Python 3.11+
+- PyTorch 2.0+
+- NumPy
+- Pygame (for rendering)
+- Pandas, Matplotlib (for analysis)
+- Jupyter (for notebooks)
+
+## Installation
+
+### Using Docker (Recommended)
+
+```bash
+# Build the Docker image
+docker compose build
+
+# Or using Makefile
+make build
+```
+
+### Local Installation
+
+```bash
+pip install -r requirements.txt
+```
+
+## Quick Start
+
+### Training
+
+```bash
+python run/train.py --name baseline --episodes 800
+```
+
+### Evaluation
+
+```bash
+python run/evaluate.py --checkpoint artifacts/checkpoints/best.pt --num_episodes 100 --render
+```
+
+### Ablation Study
+
+```bash
+bash run_ablation.sh
+```
+
+## Docker Usage
+
+### Build and Run
+
+```bash
+# Build image
+docker compose build
+
+# Run training
+docker compose run --rm train
+
+# Run evaluation
+docker compose run --rm evaluate
+
+# Start Jupyter Lab
+docker compose up jupyter
+# Access at http://localhost:8889 (or 8888 if port is available)
+```
+
+### Using Makefile
+
+```bash
+make build      # Build Docker image
+make train      # Run training
+make eval       # Run evaluation
+make jupyter    # Start Jupyter Lab
+make shell      # Interactive shell
+```
+
+## Project Structure
+
+```
+.
+├── src/
+│   ├── agent/           # REINFORCE agent implementation
+│   ├── environment/      # Game environment and renderer
+│   ├── training/        # Training loop and logger
+│   └── utils/           # Configuration and utilities
+├── run/                 # Training and evaluation scripts
+├── artifacts/           # Checkpoints, logs, and statistics
+├── analysis/            # Jupyter notebooks for analysis
+└── tests/               # Unit tests
+```
+
+## Configuration
+
+### Training Parameters
+
+- `--name`: Experiment name
+- `--norm`: Enable return normalization
+- `--entropy`: Entropy coefficient for exploration
+- `--state`: State representation mode (`absolute` or `relative`)
+- `--reward`: Reward function mode (`basic` or `enhanced`)
+- `--episodes`: Number of training episodes
+- `--seed`: Random seed for reproducibility
+
+### Environment Configuration
+
+- Grid size: 6×12
+- Block width: 1-2 cells
+- Fall speed: 1 cell per step
+- Action space: 3 actions (left, stay, right)
+
+---
+
+## Baseline Training Results
 
 > Replace the path below with your actual saved plot.
 
@@ -91,7 +203,7 @@ $$
 
 ---
 
-## 🚀 Training Improvements
+## Training Improvements
 
 During experiments we observed that the baseline REINFORCE implementation was unstable: the agent often collapsed to a single action and failed to learn an effective strategy.  
 To fix this, we tested multiple modifications.
@@ -166,7 +278,7 @@ This provides a clearer training signal and improves learning speed.
 
 ---
 
-## 📊 Comparison of Training Modifications
+## Comparison of Training Modifications
 
 > Replace the path below with your actual saved plot.
 
@@ -183,7 +295,7 @@ The comparison plot contains reward vs episode for:
 
 ---
 
-## ✅ Conclusion
+## Conclusion
 
 We demonstrated that REINFORCE can solve the Dodge Blocks environment, but it requires stabilization.  
 The best performance was achieved by combining:
@@ -194,3 +306,22 @@ The best performance was achieved by combining:
 - reward shaping
 
 These modifications made training faster, more stable, and easier to interpret.
+
+## Development
+
+### Running Tests
+
+```bash
+pytest tests/
+```
+
+### Code Structure
+
+- **Agent**: `src/agent/reinforce_agent.py` - REINFORCE algorithm implementation
+- **Environment**: `src/environment/game_env.py` - Game logic and state management
+- **Training**: `src/training/trainer.py` - Training loop and optimization
+- **Config**: `src/utils/config.py` - Configuration dataclasses
+
+## License
+
+This is an educational project.
