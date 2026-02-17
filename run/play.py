@@ -78,16 +78,19 @@ def main():
     r_cfg = RenderConfig()
     a_cfg = AgentConfig()
     
-    env = GameEnv(e_cfg)
+    seed = 42  # Default seed for play mode
+    env = GameEnv(e_cfg, seed)
     renderer = GameRenderer(e_cfg, r_cfg)
 
     if args.mode == "human":
         play_human(env, renderer)
     else:
         agent = ReinforceAgent(a_cfg)
-        ckpt_path = os.path.join("artifacts/checkpoints", args.model)
+        if args.model.startswith("artifacts/"):
+            ckpt_path = args.model
+        else:
+            ckpt_path = os.path.join("artifacts/checkpoints", args.model)
         
-        # Загружаем модель отдельно от игрового цикла, чтобы видеть ошибки загрузки
         if not os.path.exists(ckpt_path):
             print(f"Error: Model file not found at {ckpt_path}")
             return

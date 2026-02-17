@@ -38,10 +38,10 @@ def main():
     print(f"\n>>> Running Experiment: {args.name}")
     print(f"Configs: Norm={args.norm}, Entropy={args.entropy}, State={args.state}, Reward={args.reward}")
 
-    # воспроизводимость / установка seed 
-    set_global_seed(train_cfg.seed)
+    set_global_seed(args.seed)
+    env_cfg.seed = args.seed
 
-    env = GameEnv(env_cfg)
+    env = GameEnv(env_cfg, args.seed)
     agent = ReinforceAgent(agent_cfg)
     logger = Logger(train_cfg.stats_path)
     trainer = Trainer(env, agent, train_cfg, logger)

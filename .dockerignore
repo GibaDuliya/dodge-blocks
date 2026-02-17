@@ -7,7 +7,6 @@ __pycache__/
 *.egg-info/
 dist/
 build/
-*.egg
 
 # Virtual environments
 venv/
@@ -26,17 +25,23 @@ ENV/
 *.ipynb
 
 # Artifacts
-artifacts/
-*.pt
-*.pth
+artifacts/checkpoints/*.pt
+artifacts/logs/*
+artifacts/stats/*.csv
+
+# Git
+.git/
+.gitignore
+
+# Docker
+Dockerfile
+docker-compose.yml
+.dockerignore
 
 # OS
 .DS_Store
 Thumbs.db
 
-# Logs
-*.log
-logs/
-
-# Docker
-.docker/
+# Documentation
+*.md
+!README.md
