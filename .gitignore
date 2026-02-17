@@ -2,5 +2,4 @@ __pycache__/
 *.pyc
 .DS_Store
 .ipynb_checkpoints/
-artifacts/checkpoints/*.pt
-artifacts/stats/*.csv
+artifacts/
