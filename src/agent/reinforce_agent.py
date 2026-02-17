@@ -1,115 +1,159 @@
 import torch
 import numpy as np
 from torch.distributions import Categorical
-
-from src.agent.policy_network import PolicyNetwork #
-
+from collections import deque
+from src.agent.policy_network import PolicyNetwork 
 
 class ReinforceAgent:
-    """
-    Агент, использующий алгоритм REINFORCE (Monte-Carlo Policy Gradient).
-    """
+    def __init__(self, config) -> None:
+        self.gamma = config.gamma
+        self.lr = config.learning_rate
+        self.entropy_coef = config.entropy_coef
+        self.use_norm = config.use_normalization
+        self.use_height_baseline = config.use_height_baseline
+        
+        # Настройки среды (уточняются тренером)
+        self.grid_height = 12  
+        self.state_mode = "absolute"
+        
+        self.device = torch.device("cpu")
+        self.policy = PolicyNetwork(config.state_dim, config.hidden_dim, config.action_dim).to(self.device)
+        self.optimizer = torch.optim.Adam(self.policy.parameters(), lr=self.lr)
 
-    def __init__(self, config: "AgentConfig") -> None:
-        """
-        Создаёт PolicyNetwork, оптимизатор (Adam).
-        Инициализирует буферы log_probs и rewards.
-        """
-        self.gamma: float = float(getattr(config, "gamma", 0.99))
-        self.device = torch.device(getattr(config, "device", "cpu")) # костыль
-
-        state_dim: int = int(getattr(config, "state_dim", 4))
-        hidden_dim: int = int(getattr(config, "hidden_dim", 128))
-        action_dim: int = int(getattr(config, "action_dim", 3))
-        lr: float = float(getattr(config, "learning_rate", 1e-3)) #
-
-        self.policy = PolicyNetwork(state_dim, hidden_dim, action_dim).to(self.device)
-        self.optimizer = torch.optim.Adam(self.policy.parameters(), lr=lr)
-
-        # буферы эпизода
-        self.log_probs: list[torch.Tensor] = []
-        self.rewards: list[float] = []
-
-    # ---- взаимодействие со средой ----
+        # Буферы эпизода
+        self.log_probs = []
+        self.rewards = []
+        self.entropies = []
+        self.heights = []
+        
+        # --- Адаптивный Baseline ---
+        self.episode_outcomes = []  # Список для хранения исходов
+        self.episodes_count = 0     # Общий счетчик для изменения окна
+        self.max_window = 100       # Начальное (большое) окно для стабильности
+        self.min_window = 15        # Конечное (узкое) окно для скорости реакции
+        self.decay_steps = 1000     # За сколько эпизодов окно сузится до минимума
 
     def select_action(self, state: np.ndarray) -> int:
-        """
-        Прогоняет state через сеть, сэмплирует действие из Categorical,
-        сохраняет log_prob в буфер. Возвращает int action.
-        """
-        state_t = torch.as_tensor(state, dtype=torch.float32, device=self.device).unsqueeze(0)  # (1, state_dim)
-        probs = self.policy(state_t)                    # (1, action_dim)
+        state_t = torch.from_numpy(state).float().to(self.device).unsqueeze(0)
+        probs = self.policy(state_t)
         dist = Categorical(probs)
-        action = dist.sample()                          # scalar tensor
-        self.log_probs.append(dist.log_prob(action))    # scalar tensor, в графе
+        action = dist.sample()
+        
+        self.log_probs.append(dist.log_prob(action))
+        self.entropies.append(dist.entropy())
+        
+        # Извлечение block_y
+        if self.state_mode == "relative":
+            block_y = state[1] * self.grid_height
+        else:
+            block_y = state[3]
+        
+        self.heights.append(block_y)
         return int(action.item())
 
     def store_reward(self, reward: float) -> None:
-        """Добавляет reward в буфер rewards."""
-        self.rewards.append(float(reward))
+        self.rewards.append(reward)
 
-    # ---- обучение ----
+    def update_episode_stats(self, info: dict) -> None:
+        """Обновляет исходы с использованием адаптивного размера окна."""
+        outcome = None
+        if info.get('miss', False):
+            outcome = 'miss'
+        elif info.get('death', False):
+            outcome = 'death'
+        
+        if outcome:
+            self.episode_outcomes.append(outcome)
+            self.episodes_count += 1
+            
+            # Линейное уменьшение размера окна от max до min
+            # Чем больше episodes_count, тем меньше current_max_len
+            fraction = min(self.episodes_count / self.decay_steps, 1.0)
+            current_max_len = int(self.max_window - (self.max_window - self.min_window) * fraction)
+            
+            # Обрезаем список исходов до текущего размера окна
+            if len(self.episode_outcomes) > current_max_len:
+                self.episode_outcomes = self.episode_outcomes[-current_max_len:]
 
-    def compute_returns(self) -> torch.Tensor:
+    def compute_p_miss(self) -> float:
+        """Вычисляет P(miss) на основе текущего (адаптивного) окна."""
+        if not self.episode_outcomes:
+            return 0.5
+        
+        miss_count = sum(1 for outcome in self.episode_outcomes if outcome == 'miss')
+        return miss_count / len(self.episode_outcomes)
+
+    def compute_value_baseline(self, heights: torch.Tensor) -> torch.Tensor:
         """
-        По буферу rewards считает дисконтированные G_t (от конца к началу).
-        Нормализует (zero-mean, unit-std).
-        Возвращает tensor returns длины T.
+        Аналитический baseline V(h).
+        V(0) = (11*p_miss - 10) / (1 - p_miss * gamma^(H+1))
+        V(h) = gamma^h * V(0)
         """
-        returns: list[float] = []
+        p_miss = self.compute_p_miss()
+        H = self.grid_height - 1
+        
+        denominator = 1.0 - p_miss * (self.gamma ** (H + 1))
+        
+        if abs(denominator) < 1e-8:
+            V0 = 0.0
+        else:
+            # Награды: r_miss = 1, r_death = -10. Итого: 1*p + (-10)*(1-p) = 11p - 10
+            numerator = 11 * p_miss - 10
+            V0 = numerator / denominator
+        
+        V_h = (self.gamma ** heights) * V0
+        return V_h
+
+    def update_policy(self) -> float:
+        if len(self.rewards) < 2:
+            self.clear_buffers()
+            return 0.0
+
+        # Расчет дисконтированных вознаграждений (G_t)
+        returns = []
         g = 0.0
         for r in reversed(self.rewards):
             g = r + self.gamma * g
             returns.insert(0, g)
+        
+        returns = torch.tensor(returns, dtype=torch.float32, device=self.device)
+        
+        # Применение Baseline
+        if self.use_height_baseline and len(self.heights) > 0:
+            heights_t = torch.tensor(self.heights, dtype=torch.float32, device=self.device)
+            # Синхронизация длин (на случай преждевременного конца эпизода)
+            if len(heights_t) != len(returns):
+                heights_t = heights_t[:len(returns)]
+                
+            baselines = self.compute_value_baseline(heights_t)
+            advantages = returns - baselines
+        else:
+            advantages = returns
+        
+        # Нормализация преимуществ
+        if self.use_norm and len(advantages) > 1:
+            advantages = (advantages - advantages.mean()) / (advantages.std() + 1e-8)
 
-        returns_t = torch.tensor(returns, dtype=torch.float32, device=self.device)
+        log_probs = torch.stack(self.log_probs).squeeze()
+        entropies = torch.stack(self.entropies).squeeze()
 
-        # нормализация (если > 1 шага и std != 0) # нужна ли ??
-        # if returns_t.numel() > 1:
-        #     std = returns_t.std(unbiased=False)
-        #     if std.item() > 1e-8:
-        #         returns_t = (returns_t - returns_t.mean()) / (std + 1e-8)
-        return returns_t
-
-    def update_policy(self) -> float:
-        """
-        Вычисляет REINFORCE loss = −Σ log_prob_t · G_t,
-        делает backward + optimizer step.
-        Очищает буферы (вызывает clear_buffers).
-        Возвращает float loss для логирования.
-        """
-        returns_t = self.compute_returns()                     # (T,)
-        log_probs_t = torch.stack(self.log_probs)              # (T,)
-
-        loss = -(log_probs_t * returns_t).sum()
+        # Loss = Policy Loss + Entropy Bonus
+        policy_loss = -(log_probs * advantages).mean()
+        entropy_loss = -self.entropy_coef * entropies.mean()
+        
+        loss = policy_loss + entropy_loss
 
         self.optimizer.zero_grad()
         loss.backward()
+        torch.nn.utils.clip_grad_norm_(self.policy.parameters(), 1.0)
         self.optimizer.step()
 
-        loss_value = loss.item()
+        val = loss.item()
         self.clear_buffers()
-        return loss_value
+        return val
 
-    def clear_buffers(self) -> None:
-        """Очищает списки log_probs и rewards."""
-        self.log_probs.clear()
-        self.rewards.clear()
+    def clear_buffers(self):
+        self.log_probs, self.rewards, self.entropies, self.heights = [], [], [], []
 
-    # ---- сериализация ----
-
-    def save(self, path: str) -> None:
-        """torch.save state_dict + optimizer state_dict."""
-        torch.save(
-            {
-                "policy_state_dict": self.policy.state_dict(),
-                "optimizer_state_dict": self.optimizer.state_dict(),
-            },
-            path,
-        )
-
-    def load(self, path: str) -> None:
-        """torch.load и загружает state_dict'ы."""
-        checkpoint = torch.load(path, map_location=self.device, weights_only=True)
-        self.policy.load_state_dict(checkpoint["policy_state_dict"])
-        self.optimizer.load_state_dict(checkpoint["optimizer_state_dict"])
+    def save(self, path): torch.save(self.policy.state_dict(), path)
+    def load(self, path): self.policy.load_state_dict(torch.load(path, map_location=self.device))

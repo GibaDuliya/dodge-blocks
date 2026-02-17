@@ -1,40 +1,56 @@
 from dataclasses import dataclass, field
-from typing import Dict, Tuple
+from typing import Dict, Tuple, Optional
 
 @dataclass
 class EnvConfig:
-    grid_width: int = 30         # ширина поля (число клеток)
-    block_min_width: int = 1   # мин. ширина блока
-    block_max_width: int = 1      # макс. ширина блока
-    block_fall_speed: int = 1    # на сколько клеток блок опускается за шаг
-    grid_height: int = 10         # высота поля (откуда блок начинает падать)
-    agent_start_pos: int = None     # стартовая позиция агента (None → центр)
+    grid_width: int = 6
+    grid_height: int = 12
+    block_min_width: int = 1
+    block_max_width: int = 2
+    block_fall_speed: int = 1
+    # Ablation Flags
+
+    state_mode: str = "relative" # "absolute" или "relative"
+    reward_mode: str = "enhanced" # "basic" или "enhanced"
+    # seed для генератора случайных чисел в game_env.py
+    seed = 42
+
 
 @dataclass
 class AgentConfig:
-    state_dim: int           # размерность входа (= 4)
-    hidden_dim: int          # нейроны скрытого слоя
-    action_dim: int          # размерность выхода (= 3)
-    learning_rate: float
-    gamma: float             # дисконт-фактор
+    state_dim: int = 4
+    hidden_dim: int = 128
+    action_dim: int = 3
+    learning_rate: float = 0.001 
+    gamma: float = 0.99
+    # Ablation Flags
+    use_normalization: bool = True
+    entropy_coef: float = 0.0 # 0.0 для отключения
+    use_height_baseline: bool = False
 
 @dataclass
 class TrainConfig:
-    num_episodes: int
-    max_steps_per_episode: int
-    checkpoint_every: int     # сохранять модель каждые N эпизодов
-    log_every: int            # логировать каждые N эпизодов
-    stats_path: str           # путь к CSV
-    checkpoint_dir: str       # папка чекпоинтов
+    num_episodes: int = 800
+    max_steps_per_episode: int = 2000
+    checkpoint_every: int = 500
+    log_every: int = 1
+    # Пути будут динамическими в зависимости от эксперимента
+    exp_name: str = "default"
+    stats_path: str = "" 
+    checkpoint_dir: str = ""
+    early_stop_window: int = 50
+    early_stop_threshold: float = 0.8
+    # 
+    seed = 42
 
 @dataclass
 class RenderConfig:
     cell_size: int = 40
-    fps: int = 10
+    fps: int = 30
     colors: Dict[str, Tuple[int, int, int]] = field(default_factory=lambda: {
-        "agent": (50, 200, 50),    # Зеленый
-        "block": (200, 50, 50),    # Красный
-        "bg": (30, 30, 30),       # Темно-серый
-        "grid": (50, 50, 50),     # Линии сетки
-        "text": (255, 255, 255)   # Белый
+        "agent": (50, 200, 50),
+        "block": (200, 50, 50),
+        "bg": (30, 30, 30),
+        "grid": (50, 50, 50),
+        "text": (255, 255, 255)
     })
