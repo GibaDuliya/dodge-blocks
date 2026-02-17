@@ -60,25 +60,25 @@ We train a stochastic policy $\pi_\theta(a|s)$ parameterized by a neural network
 For each episode we collect a trajectory:
 
 $$
-(s_0, a_0, r_0), (s_1, a_1, r_1), ..., (s_T, a_T, r_T)
+(s_0, a_0), (s_1, a_1), ..., (s_\tau, a_\tau)
 $$
 
 Discounted returns:
 
 $$
-G_t = \sum_{k=t}^{T} \gamma^{k-t} r_k
+G_t = \sum_{k=t}^{\tau-1} \gamma^{k} r_k
 $$
 
 REINFORCE objective:
 
 $$
-J(\theta) = \mathbb{E}\left[\sum_{t=0}^{T} G_t \log \pi_\theta(a_t|s_t)\right]
+J(\theta) = \mathbb{E}\left[\sum_{t=0}^{\tau-1} G_t \log \pi_\theta(a_t|s_t)\right]
 $$
 
 Loss (minimized in practice):
 
 $$
-L(\theta) = -\sum_{t=0}^{T} G_t \log \pi_\theta(a_t|s_t)
+L(\theta) = -\sum_{t=0}^{\tau-1} G_t \log \pi_\theta(a_t|s_t)
 $$
 
 ---
@@ -197,7 +197,6 @@ make shell      # Interactive shell
 
 ## Baseline Training Results
 
-> Replace the path below with your actual saved plot.
 
 ![Baseline training curve](artifacts/plots/training_baseline.png)
 
