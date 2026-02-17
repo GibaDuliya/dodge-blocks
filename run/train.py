@@ -15,6 +15,7 @@ def parse_args():
     parser.add_argument("--name", type=str, default="baseline", help="Experiment name")
     parser.add_argument("--norm", action="store_true", help="Use return normalization")
     parser.add_argument("--entropy", type=float, default=0.0, help="Entropy coefficient")
+    parser.add_argument("--baseline", action="store_true", help="Use height-based analytic baseline")
     parser.add_argument("--state", choices=["absolute", "relative"], default="absolute")
     parser.add_argument("--reward", choices=["basic", "enhanced"], default="basic")
     parser.add_argument("--episodes", type=int, default=800)
@@ -25,7 +26,7 @@ def main():
     args = parse_args()
     # Инициализация конфигов с учетом аргументов
     env_cfg = EnvConfig(state_mode=args.state, reward_mode=args.reward)
-    agent_cfg = AgentConfig(use_normalization=args.norm, entropy_coef=args.entropy)
+    agent_cfg = AgentConfig(use_normalization=args.norm, entropy_coef=args.entropy, use_height_baseline=args.baseline)
     
     # Настройка путей для эксперимента
     train_cfg = TrainConfig(
@@ -36,7 +37,7 @@ def main():
     )
 
     print(f"\n>>> Running Experiment: {args.name}")
-    print(f"Configs: Norm={args.norm}, Entropy={args.entropy}, State={args.state}, Reward={args.reward}")
+    print(f"Configs: Norm={args.norm}, Entropy={args.entropy}, Baseline={args.baseline}, State={args.state}, Reward={args.reward}")
 
     # воспроизводимость / установка seed 
     set_global_seed(train_cfg.seed)

@@ -24,24 +24,29 @@ class GameEnv:
         reward = 0.0
         collision = (self.block_y <= 0 and (self.block_left <= self.agent_x <= self.block_right))
         passed = (self.block_y < 0)
+        info = {}
 
         if self.cfg.reward_mode == "enhanced":
             reward = 0.1 
             if collision:
                 reward = -15.0
                 self.done = True
+                info['death'] = True
             elif passed:
                 reward = 10.0
                 self._spawn_block()
+                info['miss'] = True
         else: # Basic mode (старый вариант)
             if collision:
                 reward = -10.0
                 self.done = True
+                info['death'] = True
             elif passed:
                 reward = 1.0
                 self._spawn_block()
+                info['miss'] = True
 
-        return self.get_state(), reward, self.done, {}
+        return self.get_state(), reward, self.done, info
 
     def get_state(self) -> np.ndarray:
         # 3. Ablation: State Representation
