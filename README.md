@@ -307,10 +307,6 @@ pytest tests/
 - **Training**: `src/training/trainer.py` - Training loop and optimization
 - **Config**: `src/utils/config.py` - Configuration dataclasses
 
-## License
-
-This is an educational project.
-
 ---
 
 ## Requirements
