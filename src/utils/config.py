@@ -10,8 +10,8 @@ class EnvConfig:
     block_fall_speed: int = 1
     # Ablation Flags
 
-    state_mode: str = "relative" # "absolute" или "relative"
-    reward_mode: str = "enhanced" # "basic" или "enhanced"
+    state_mode: str = "absolute" # "absolute" или "relative"
+    reward_mode: str = "basic" # "basic" или "enhanced"
     # seed для генератора случайных чисел в game_env.py
     seed = 42
 

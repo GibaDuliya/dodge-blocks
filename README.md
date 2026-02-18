@@ -91,6 +91,18 @@ $$
 
 ![Original REINFORCE training curve](analysis/simple_model.png)
 
+Let's evaluate our trained agent on 100 episodes. 
+
+```bash
+Evaluation Results:
+  Episodes: 100
+  Average Reward: 145.34
+  Max Reward: 153.00
+  Min Reward: 0.00
+  Average Steps: 1909.6
+```
+The visualisation of the trained agent game you can see in the gif above, at the beginning of this README file.
+
 ---
 
 ## Training Improvements
@@ -317,6 +329,7 @@ pytest tests/
 - Pygame (for rendering)
 - Pandas, Matplotlib (for analysis)
 - Jupyter (for notebooks)
+- Seaborn
 
 ## Installation
 
@@ -338,22 +351,30 @@ pip install -r requirements.txt
 
 ## Quick Start
 
-### Training
+### Training Original REINFORCE
 
 ```bash
-python run/train.py --name baseline --episodes 800
+python run/train.py --name 0_original --state absolute --reward basic --episodes 10000 --seed 42
 ```
 
 ### Evaluation
 
 ```bash
-python run/evaluate.py --checkpoint artifacts/checkpoints/best.pt --num_episodes 100 --render
+python run/evaluate.py --checkpoint artifacts/ablation/0_original/checkpoints/best.pt
+ --state absolute --reward basic --num_episodes 100
 ```
 
 ### Ablation Study
 
 ```bash
 bash run_ablation.sh
+```
+
+
+### Baseline Stability Test 
+
+```bash
+bash run_20_seed.sh
 ```
 
 ## Docker Usage

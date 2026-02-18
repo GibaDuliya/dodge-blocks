@@ -6,7 +6,7 @@ sys.path.append(os.getcwd())
 
 from src.environment.game_env import GameEnv
 from src.agent.reinforce_agent import ReinforceAgent
-from src.utils.config import EnvConfig, AgentConfig
+from src.utils.config import EnvConfig, AgentConfig, TrainConfig
 from src.utils.seed import set_global_seed
 
 def parse_args():
@@ -15,6 +15,11 @@ def parse_args():
     parser.add_argument("--num_episodes", type=int, default=100, help="Number of episodes to evaluate")
     parser.add_argument("--render", action="store_true", help="Render the game")
     parser.add_argument("--seed", type=int, default=42, help="Random seed")
+    parser.add_argument("--state", choices=["absolute", "relative"], default="relative", help="State mode")
+    parser.add_argument("--reward", choices=["basic", "enhanced"], default="enhanced", help="Reward mode")
+    parser.add_argument("--norm", action="store_true", help="Use return normalization")
+    parser.add_argument("--entropy", type=float, default=0.0, help="Entropy coefficient")
+    parser.add_argument("--baseline", action="store_true", help="Use height-based analytic baseline")
     return parser.parse_args()
 
 def main():
@@ -22,12 +27,17 @@ def main():
     
     # Setup
     set_global_seed(args.seed)
-    env_cfg = EnvConfig()
-    agent_cfg = AgentConfig()
+    env_cfg = EnvConfig(state_mode=args.state, reward_mode=args.reward)
+    agent_cfg = AgentConfig(use_normalization=args.norm, entropy_coef=args.entropy, use_height_baseline=args.baseline)
+    train_cfg = TrainConfig()
     
     # Create environment and agent
     env = GameEnv(env_cfg, args.seed)
     agent = ReinforceAgent(agent_cfg)
+    
+    # Set grid height and state mode on agent for baseline computation (same as in Trainer)
+    agent.grid_height = env.cfg.grid_height
+    agent.state_mode = env.cfg.state_mode
     
     # Load checkpoint
     if not os.path.exists(args.checkpoint):
@@ -57,6 +67,9 @@ def main():
             state, reward, done, _ = env.step(action)
             episode_reward += reward
             episode_steps += 1
+            
+            if episode_steps >= train_cfg.max_steps_per_episode:
+                done = True
         
         total_rewards.append(episode_reward)
         total_steps.append(episode_steps)
