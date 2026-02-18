@@ -15,7 +15,7 @@ We consider a **one-dimensional discrete grid** of fixed width `W`. The agent is
 
 At each timestep, a block of some width falls down from the top of the grid. If the falling block reaches the agent level and overlaps the agent position, the episode ends.
 
-The goal of the agent is to **survive as long as possible**.
+The goal of the agent is to **survive as long as possible**. For this project we limit the number of maximum steps per epsiode with **2000 steps**.
 
 ---
 
