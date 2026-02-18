@@ -333,7 +333,7 @@ pytest tests/
 
 ## Installation
 
-### Using Docker (Recommended)
+### Using Docker (Not Recommended)
 
 ```bash
 # Build the Docker image
@@ -360,8 +360,7 @@ python run/train.py --name 0_original --state absolute --reward basic --episodes
 ### Evaluation
 
 ```bash
-python run/evaluate.py --checkpoint artifacts/ablation/0_original/checkpoints/best.pt
- --state absolute --reward basic --num_episodes 100
+python run/evaluate.py --checkpoint artifacts/ablation/0_original/checkpoints/best.pt --state absolute --reward basic --num_episodes 100
 ```
 
 ### Ablation Study
